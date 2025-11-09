@@ -1,11 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Home,
-  User,
-  LogOut,
-  Sparkles,
-} from "lucide-react"; // ✨ ikon dari lucide-react
+import { Home, User, LogOut, Sparkles, Search } from "lucide-react";
 
 export default function Navbar() {
   const navigate = useNavigate();
@@ -17,7 +12,6 @@ export default function Navbar() {
 
   return (
     <nav className="fixed left-0 top-0 h-screen w-60 bg-white border-r border-gray-200 shadow-sm flex flex-col justify-between">
-      {/* Header Logo */}
       <div className="p-6">
         <div
           className="flex items-center gap-2 cursor-pointer"
@@ -30,7 +24,6 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Navigation Buttons */}
       <div className="flex-1 flex flex-col gap-2 px-4 mt-4">
         <button
           onClick={() => navigate("/feed")}
@@ -38,6 +31,14 @@ export default function Navbar() {
         >
           <Home size={18} />
           <span>Feed</span>
+        </button>
+
+        <button
+          onClick={() => navigate("/search")}
+          className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-pink-50 hover:text-pink-600 transition-colors"
+        >
+          <Search size={18} />
+          <span>Search</span>
         </button>
 
         <button
@@ -49,7 +50,6 @@ export default function Navbar() {
         </button>
       </div>
 
-      {/* Logout Button */}
       <div className="p-4 border-t border-gray-100">
         <button
           onClick={logout}

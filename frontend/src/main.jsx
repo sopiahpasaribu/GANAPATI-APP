@@ -7,17 +7,17 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import FeedPage from "./pages/FeedPage";
 import ProfilePage from "./pages/ProfilePage";
-import Navbar from "./components/Navbar"; // ✅ import Navbar di sini
+import SearchPage from "./pages/SearchPage"; // ✅ perbaikan: import SearchPage dari folder pages
+import Navbar from "./components/Navbar"; // ✅ hanya 1 import Navbar
 
-// ✅ Komponen wrapper untuk halaman yang butuh login + tampilkan Navbar
 function ProtectedLayout({ token }) {
   if (!token) return <Navigate to="/login" replace />;
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex bg-gray-50">
       <Navbar />
-      <div className="flex-1">
-        <Outlet /> {/* tempat halaman Feed / Profile muncul */}
+      <div className="flex-1 ml-60 overflow-auto">
+        <Outlet />
       </div>
     </div>
   );
@@ -26,7 +26,6 @@ function ProtectedLayout({ token }) {
 function App() {
   const [token, setToken] = useState(localStorage.getItem("token"));
 
-  // Update state kalau token berubah (misal setelah login/logout)
   useEffect(() => {
     const onStorageChange = () => setToken(localStorage.getItem("token"));
     window.addEventListener("storage", onStorageChange);
@@ -36,21 +35,14 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Auth routes */}
         <Route path="/login" element={<LoginPage setToken={setToken} />} />
         <Route path="/register" element={<RegisterPage />} />
-
-        {/* ✅ Semua route yang butuh login dibungkus di ProtectedLayout */}
         <Route element={<ProtectedLayout token={token} />}>
           <Route path="/feed" element={<FeedPage />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/search" element={<SearchPage />} /> {/* ✅ route benar */}
         </Route>
-
-        {/* Default redirect */}
-        <Route
-          path="/"
-          element={<Navigate to={token ? "/feed" : "/login"} replace />}
-        />
+        <Route path="/" element={<Navigate to={token ? "/feed" : "/login"} replace />} />
       </Routes>
     </BrowserRouter>
   );
