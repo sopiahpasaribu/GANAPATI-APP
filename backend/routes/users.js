@@ -4,13 +4,24 @@ const auth = require("../middleware/auth");
 
 const router = express.Router();
 
-// ✅ ambil semua user (kecuali diri sendiri)
 router.get("/users", auth, (req, res) => {
   try {
-    const users = all("SELECT id, username, created_at FROM users ORDER BY username");
-    const followRows = all("SELECT followee_id FROM follows WHERE follower_id = ?", [req.user.id]);
+    const users = all(
+      "SELECT id, username, created_at FROM users WHERE id != ? ORDER BY username",
+      [req.user.id]
+    );
+
+    const followRows = all(
+      "SELECT followee_id FROM follows WHERE follower_id = ?",
+      [req.user.id]
+    );
     const following = new Set(followRows.map((r) => r.followee_id));
-    const result = users.map((u) => ({ ...u, is_following: following.has(u.id) }));
+
+    const result = users.map((u) => ({
+      ...u,
+      isFollowing: following.has(u.id),
+    }));
+
     res.json(result);
   } catch (err) {
     console.error(err);
@@ -18,7 +29,6 @@ router.get("/users", auth, (req, res) => {
   }
 });
 
-// ✅ search user berdasarkan username (partial match, case-insensitive) + include posts, followers_count, is_following
 router.get("/users/search", auth, (req, res) => {
   try {
     let { username } = req.query;
@@ -26,7 +36,6 @@ router.get("/users/search", auth, (req, res) => {
 
     username = username.trim().toLowerCase();
 
-    // ✅ Ambil user beserta jumlah followers & following (lebih akurat)
     const users = all(
       `
       SELECT 
@@ -42,11 +51,12 @@ router.get("/users/search", auth, (req, res) => {
       [`%${username}%`]
     );
 
-    // ambil semua user yang difollow oleh pengguna saat ini
-    const followRows = all("SELECT followee_id FROM follows WHERE follower_id = ?", [req.user.id]);
+    const followRows = all(
+      "SELECT followee_id FROM follows WHERE follower_id = ?",
+      [req.user.id]
+    );
     const following = new Set(followRows.map((r) => r.followee_id));
 
-    // untuk setiap user hasil pencarian, ambil postingannya juga
     const result = users.map((u) => {
       const posts = all(
         "SELECT id, content, image_url, created_at FROM posts WHERE user_id = ? ORDER BY created_at DESC",
@@ -54,7 +64,7 @@ router.get("/users/search", auth, (req, res) => {
       );
       return {
         ...u,
-        is_following: following.has(u.id),
+        isFollowing: following.has(u.id),
         posts,
       };
     });
@@ -77,10 +87,14 @@ router.get("/users/:id", auth, (req, res) => {
       "SELECT id, content, image_url, created_at FROM posts WHERE user_id = ? ORDER BY created_at DESC",
       [id]
     );
-    const followRows = all("SELECT followee_id FROM follows WHERE follower_id = ?", [req.user.id]);
-    const is_following = followRows.some((f) => f.followee_id === id);
 
-    res.json({ ...user, is_following, posts });
+    const followRows = all(
+      "SELECT followee_id FROM follows WHERE follower_id = ?",
+      [req.user.id]
+    );
+    const isFollowing = followRows.some((f) => f.followee_id === id);
+
+    res.json({ ...user, isFollowing, posts });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "internal" });

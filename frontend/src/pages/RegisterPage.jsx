@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../api";
+import { Sparkles } from "lucide-react";
 
 export default function RegisterPage() {
   const [username, setUsername] = useState("");
@@ -25,16 +26,24 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-100 to-blue-100 p-4">
-      <div className="bg-white shadow-lg rounded-2xl w-full max-w-md p-8">
-        <h2 className="text-3xl font-bold text-center text-gray-800 mb-6">
-          Register
-        </h2>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-100 via-white to-purple-100">
+      <div className="bg-white shadow-xl rounded-2xl w-full max-w-md p-8 border border-gray-100">
+        {/* Logo dan Judul */}
+        <div className="flex flex-col items-center mb-6">
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkles className="text-pink-500" size={28} />
+            <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-600">
+              Ganapati App
+            </h1>
+          </div>
+          <p className="text-gray-500 text-sm">Buat akun baru kamu</p>
+        </div>
 
+        {/* Form */}
         <form onSubmit={onSubmit} className="space-y-4">
           <input
             type="text"
-            className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-400"
+            className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:border-transparent"
             placeholder="Username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
@@ -42,7 +51,7 @@ export default function RegisterPage() {
 
           <input
             type="password"
-            className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-400"
+            className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:border-transparent"
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -55,13 +64,13 @@ export default function RegisterPage() {
           <div className="flex gap-3 pt-2">
             <button
               type="submit"
-              className="w-1/2 bg-purple-500 text-white font-semibold py-2 rounded-lg hover:bg-purple-600 transition-colors duration-200"
+              className="w-1/2 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-semibold py-2 rounded-lg shadow-md hover:opacity-90 transition-all duration-200"
             >
               Register
             </button>
             <button
               type="button"
-              className="w-1/2 border border-purple-400 text-purple-600 font-semibold py-2 rounded-lg hover:bg-purple-50 transition-colors duration-200"
+              className="w-1/2 border border-pink-400 text-pink-600 font-semibold py-2 rounded-lg hover:bg-pink-50 transition-all duration-200"
               onClick={() => navigate("/login")}
             >
               Go to Login

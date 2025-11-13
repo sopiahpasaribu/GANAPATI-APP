@@ -9,11 +9,7 @@ const postRoutes = require('./routes/posts');
 const followRoutes = require('./routes/follows');
 const userRoutes = require('./routes/users');
 const meRoutes = require('./routes/me');
-
-// ✅ Tambahan routes baru
 const storyRoutes = require('./routes/stories');
-const commentRoutes = require('./routes/comments');
-const chatRoutes = require('./routes/chats');
 
 const PORT = process.env.PORT || 4000;
 
@@ -28,11 +24,7 @@ app.use('/api', postRoutes);
 app.use('/api', followRoutes);
 app.use('/api', userRoutes);
 app.use('/api', meRoutes);
-
-// ✅ Tambahkan route baru agar sesuai DB
 app.use('/api', storyRoutes);
-app.use('/api', commentRoutes);
-app.use('/api', chatRoutes);
 
 app.get('/', (req, res) => {
   res.send({ ok: true });

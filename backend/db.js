@@ -32,7 +32,6 @@ function ensureMigrations() {
       FOREIGN KEY(followee_id) REFERENCES users(id)
     );
 
-    -- ✅ Tambahan tabel untuk Story
     CREATE TABLE IF NOT EXISTS stories (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER,
@@ -41,29 +40,6 @@ function ensureMigrations() {
       created_at TEXT,
       expires_at TEXT,
       FOREIGN KEY(user_id) REFERENCES users(id)
-    );
-
-    -- ✅ Tambahan tabel untuk Komentar
-    CREATE TABLE IF NOT EXISTS comments (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      post_id INTEGER,
-      user_id INTEGER,
-      content TEXT,
-      created_at TEXT,
-      FOREIGN KEY(post_id) REFERENCES posts(id),
-      FOREIGN KEY(user_id) REFERENCES users(id)
-    );
-
-    -- ✅ Tambahan tabel untuk Chat antar user
-    CREATE TABLE IF NOT EXISTS chats (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      sender_id INTEGER,
-      receiver_id INTEGER,
-      message TEXT,
-      image_url TEXT, -- opsional: untuk kirim gambar juga
-      created_at TEXT,
-      FOREIGN KEY(sender_id) REFERENCES users(id),
-      FOREIGN KEY(receiver_id) REFERENCES users(id)
     );
   `);
 }

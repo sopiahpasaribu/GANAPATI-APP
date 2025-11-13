@@ -1,19 +1,32 @@
 import React, { useEffect, useState } from "react";
 import API from "../api";
 import { useNavigate } from "react-router-dom";
+import StorySection from "../components/StorySection";
+import PostSection from "../components/PostSection";
 
 function ProfilePage() {
   const [user, setUser] = useState(null);
   const [posts, setPosts] = useState([]);
   const [stories, setStories] = useState([]);
-  const [followers, setFollowers] = useState([]); // ✅ followers list
-  const [following, setFollowing] = useState([]); // ✅ following list
-  const [showFollowers, setShowFollowers] = useState(false);
-  const [showFollowing, setShowFollowing] = useState(false);
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [selectedType, setSelectedType] = useState(null);
+  const [followers, setFollowers] = useState([]);
+  const [following, setFollowing] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const [content, setContent] = useState("");
+  const [image, setImage] = useState("");
+  const [count, setCount] = useState(0);
+  const [storyImage, setStoryImage] = useState("");
+  const [storyCaption, setStoryCaption] = useState("");
+
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [selectedType, setSelectedType] = useState(null);
+  const [editMode, setEditMode] = useState(false);
+  const [editContent, setEditContent] = useState("");
+  const [editImage, setEditImage] = useState("");
+  const [showFollowers, setShowFollowers] = useState(false);
+  const [showFollowing, setShowFollowing] = useState(false);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -46,6 +59,86 @@ function ProfilePage() {
     fetchData();
   }, [navigate]);
 
+  // === POST ===
+  async function submitPost(e) {
+    e.preventDefault();
+    if (!content.trim() && !image.trim())
+      return setError("Post tidak boleh kosong");
+    try {
+      const p = await API.createPost(content, image || null);
+      setPosts((prev) => [p, ...prev]);
+      setContent("");
+      setImage("");
+      setCount(0);
+    } catch (err) {
+      setError(err.data?.error || "Gagal membuat post");
+    }
+  }
+
+  async function handleDeletePost(id) {
+    if (!window.confirm("Yakin ingin hapus post ini?")) return;
+    try {
+      await API.deletePost(id);
+      setPosts((prev) => prev.filter((p) => p.id !== id));
+      setSelectedItem(null);
+    } catch {
+      alert("Gagal menghapus post.");
+    }
+  }
+
+  async function handleUpdatePost(e) {
+    e.preventDefault();
+    try {
+      await API.updatePost(selectedItem.id, {
+        content: editContent,
+        image_url: editImage || null,
+      });
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === selectedItem.id
+            ? { ...p, content: editContent, image_url: editImage }
+            : p
+        )
+      );
+      setEditMode(false);
+      setSelectedItem(null);
+    } catch {
+      alert("Gagal update post.");
+    }
+  }
+
+  // === STORY ===
+  async function submitStory(e) {
+    e.preventDefault();
+    if (!storyImage.trim()) return setError("Story harus punya gambar");
+    try {
+      await API.createStory(storyImage, storyCaption || "");
+      const updatedStories = await API.getMyStories();
+      setStories(updatedStories);
+      setStoryImage("");
+      setStoryCaption("");
+    } catch (err) {
+      setError(err.data?.error || "Gagal membuat story");
+    }
+  }
+
+  // === FOLLOW / UNFOLLOW (untuk popup) ===
+  async function handleToggleFollow(targetId, isCurrentlyFollowing) {
+    try {
+      if (isCurrentlyFollowing) {
+        await API.unfollow(targetId);
+      } else {
+        await API.follow(targetId);
+      }
+      const updatedFollowers = await API.getFollowers();
+      const updatedFollowing = await API.getFollowing();
+      setFollowers(updatedFollowers);
+      setFollowing(updatedFollowing);
+    } catch (err) {
+      console.error("Gagal ubah status follow:", err);
+    }
+  }
+
   if (loading)
     return (
       <div className="flex justify-center items-center min-h-screen bg-white">
@@ -64,299 +157,166 @@ function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Profile Header */}
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        {/* === PROFILE HEADER === */}
         {user && (
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm mb-10">
-            <div className="px-6 pb-6 pt-8">
-              <div className="flex flex-col sm:flex-row items-center">
-                <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-yellow-400 to-pink-500 flex items-center justify-center text-white text-2xl font-bold shadow-sm">
-                  {user.username.charAt(0).toUpperCase()}
-                </div>
-
-                <div className="sm:ml-8 mt-4 sm:mt-0 text-center sm:text-left flex-1">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <h1 className="text-xl font-semibold text-gray-800">
-                        {user.username}
-                      </h1>
-                      <p className="text-gray-500 text-sm mt-1">
-                        Joined{" "}
-                        {new Date(user.created_at).toLocaleDateString("en-US", {
-                          month: "long",
-                          year: "numeric",
-                        })}
-                      </p>
-                    </div>
-
-                    <button
-                      onClick={() => navigate("/edit-profile")}
-                      className="mt-3 sm:mt-0 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition"
-                    >
-                      Edit Profile
-                    </button>
-                  </div>
-
-                  {/* ✅ Followers / Following clickable */}
-                  <div className="flex justify-center sm:justify-start gap-10 mt-5 text-gray-700">
-                    <div className="text-center">
-                      <div className="font-bold text-lg">{posts.length}</div>
-                      <div className="text-sm text-gray-500">Posts</div>
-                    </div>
-
-                    <div
-                      className="text-center cursor-pointer hover:text-pink-500 transition"
-                      onClick={() => setShowFollowers(true)}
-                    >
-                      <div className="font-bold text-lg">
-                        {followers.length ?? 0}
-                      </div>
-                      <div className="text-sm text-gray-500">Followers</div>
-                    </div>
-
-                    <div
-                      className="text-center cursor-pointer hover:text-pink-500 transition"
-                      onClick={() => setShowFollowing(true)}
-                    >
-                      <div className="font-bold text-lg">
-                        {following.length ?? 0}
-                      </div>
-                      <div className="text-sm text-gray-500">Following</div>
-                    </div>
-                  </div>
-                </div>
+          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
+              <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-yellow-400 to-pink-500 flex items-center justify-center text-white text-3xl font-bold">
+                {user.username.charAt(0).toUpperCase()}
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* ✅ My Stories */}
-        {stories.length > 0 && (
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm mb-10">
-            <div className="px-6 py-4 border-b border-gray-100">
-              <h2 className="text-lg font-semibold text-gray-800">My Stories</h2>
-            </div>
-            <div className="p-6 flex flex-wrap gap-6 justify-center sm:justify-start">
-              {stories.map((s) => (
-                <div
-                  key={s.id}
-                  onClick={() => {
-                    setSelectedItem(s);
-                    setSelectedType("story");
-                  }}
-                  className="cursor-pointer transition-transform hover:scale-105"
-                >
-                  <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-pink-500 shadow-md">
-                    <img
-                      src={s.image_url}
-                      alt={s.caption}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  {s.caption && (
-                    <p className="text-gray-600 text-sm mt-2 text-center truncate w-24">
-                      {s.caption}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ✅ Posts Section */}
-        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm">
-          <div className="px-6 py-4 border-b border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-800">Posts</h2>
-          </div>
-
-          <div className="p-6">
-            {posts.length === 0 ? (
-              <div className="text-center py-10">
-                <div className="text-gray-400 text-lg mb-2">No posts yet</div>
-                <p className="text-gray-500 mb-4">
-                  You haven't shared anything yet. Start creating your first post.
+              <div className="flex-1 text-center sm:text-left">
+                <h1 className="text-2xl font-semibold text-gray-800">
+                  {user.username}
+                </h1>
+                <p className="text-sm text-gray-500 mt-1">
+                  Joined{" "}
+                  {new Date(user.created_at).toLocaleDateString("en-US", {
+                    month: "long",
+                    year: "numeric",
+                  })}
                 </p>
-                <button
-                  className="px-5 py-2 bg-pink-500 text-white rounded-md text-sm hover:bg-pink-600 transition-all"
-                  onClick={() => navigate("/create-post")}
-                >
-                  Create Post
-                </button>
-              </div>
-            ) : (
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {posts.map((p) => (
-                  <div
-                    key={p.id}
-                    onClick={() => {
-                      setSelectedItem(p);
-                      setSelectedType("post");
-                    }}
-                    className="border border-gray-200 rounded-xl overflow-hidden bg-white hover:shadow-lg transition-all duration-200 cursor-pointer"
-                  >
-                    {p.image_url && (
-                      <img
-                        src={p.image_url}
-                        alt="Post"
-                        className="w-full h-60 object-cover"
-                      />
-                    )}
-                    <div className="p-4">
-                      {p.content && (
-                        <p className="text-gray-700 text-sm mb-3 line-clamp-3">
-                          {p.content}
-                        </p>
-                      )}
-                      <p className="text-xs text-gray-400">
-                        {new Date(p.created_at).toLocaleString()}
-                      </p>
-                    </div>
+                <div className="flex justify-center sm:justify-start gap-10 mt-4">
+                  <div>
+                    <span className="font-bold">{posts.length}</span>
+                    <div className="text-sm text-gray-500">Posts</div>
                   </div>
-                ))}
+                  <div
+                    className="cursor-pointer hover:text-pink-500"
+                    onClick={() => setShowFollowers(true)}
+                  >
+                    <span className="font-bold">{followers.length}</span>
+                    <div className="text-sm text-gray-500">Followers</div>
+                  </div>
+                  <div
+                    className="cursor-pointer hover:text-pink-500"
+                    onClick={() => setShowFollowing(true)}
+                  >
+                    <span className="font-bold">{following.length}</span>
+                    <div className="text-sm text-gray-500">Following</div>
+                  </div>
+                </div>
               </div>
-            )}
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* ✅ Followers Modal */}
+        {/* === COMPONENTS === */}
+        <StorySection
+          storyImage={storyImage}
+          setStoryImage={setStoryImage}
+          storyCaption={storyCaption}
+          setStoryCaption={setStoryCaption}
+          stories={stories}
+          setStories={setStories}
+          setSelectedItem={setSelectedItem}
+          setSelectedType={setSelectedType}
+          submitStory={submitStory}
+        />
+
+        <PostSection
+          posts={posts}
+          setPosts={setPosts}
+          content={content}
+          setContent={setContent}
+          image={image}
+          setImage={setImage}
+          count={count}
+          setCount={setCount}
+          selectedItem={selectedItem}
+          setSelectedItem={setSelectedItem}
+          selectedType={selectedType}
+          setSelectedType={setSelectedType}
+          editMode={editMode}
+          setEditMode={setEditMode}
+          editContent={editContent}
+          setEditContent={setEditContent}
+          editImage={editImage}
+          setEditImage={setEditImage}
+          submitPost={submitPost}
+          handleDeletePost={handleDeletePost}
+          handleUpdatePost={handleUpdatePost}
+        />
+
+        {/* === MODAL FOLLOWERS === */}
         {showFollowers && (
-          <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50"
-            onClick={() => setShowFollowers(false)}
-          >
-            <div
-              className="bg-white rounded-2xl w-[90%] sm:w-[400px] max-h-[70vh] overflow-y-auto shadow-2xl relative p-6"
-              onClick={(e) => e.stopPropagation()}
-            >
+          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl p-6 w-80 max-h-[80vh] overflow-y-auto shadow-lg relative">
               <button
                 onClick={() => setShowFollowers(false)}
-                className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 text-xl"
+                className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
               >
                 ✕
               </button>
-              <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">
+              <h2 className="text-lg font-semibold mb-4 text-center">
                 Followers
-              </h3>
-              {followers.length === 0 ? (
-                <p className="text-gray-500 text-center">No followers yet</p>
-              ) : (
-                <ul className="divide-y divide-gray-100">
-                  {followers.map((f) => (
-                    <li
-                      key={f.id}
-                      className="py-3 px-2 hover:bg-gray-50 cursor-pointer rounded-md flex items-center gap-3"
-                    >
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-pink-400 to-purple-500 flex items-center justify-center text-white font-medium">
+              </h2>
+              {followers.length > 0 ? (
+                followers.map((f) => (
+                  <div
+                    key={f.id}
+                    className="flex items-center justify-between border-b border-gray-100 py-2"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-pink-400 to-yellow-400 flex items-center justify-center text-white font-semibold">
                         {f.username.charAt(0).toUpperCase()}
                       </div>
-                      <span className="text-gray-700 font-medium">
-                        {f.username}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+                      <p className="text-gray-700">{f.username}</p>
+                    </div>
+                    <button
+                      onClick={() => handleToggleFollow(f.id, true)}
+                      className="text-xs px-3 py-1 rounded-full bg-gray-200 hover:bg-gray-300 text-gray-700"
+                    >
+                      Unfollow
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <p className="text-center text-gray-500 text-sm">
+                  Belum ada followers.
+                </p>
               )}
             </div>
           </div>
         )}
 
-        {/* ✅ Following Modal */}
+        {/* === MODAL FOLLOWING === */}
         {showFollowing && (
-          <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50"
-            onClick={() => setShowFollowing(false)}
-          >
-            <div
-              className="bg-white rounded-2xl w-[90%] sm:w-[400px] max-h-[70vh] overflow-y-auto shadow-2xl relative p-6"
-              onClick={(e) => e.stopPropagation()}
-            >
+          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl p-6 w-80 max-h-[80vh] overflow-y-auto shadow-lg relative">
               <button
                 onClick={() => setShowFollowing(false)}
-                className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 text-xl"
+                className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
               >
                 ✕
               </button>
-              <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">
+              <h2 className="text-lg font-semibold mb-4 text-center">
                 Following
-              </h3>
-              {following.length === 0 ? (
-                <p className="text-gray-500 text-center">
-                  Not following anyone yet
-                </p>
-              ) : (
-                <ul className="divide-y divide-gray-100">
-                  {following.map((f) => (
-                    <li
-                      key={f.id}
-                      className="py-3 px-2 hover:bg-gray-50 cursor-pointer rounded-md flex items-center gap-3"
-                    >
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-yellow-400 to-pink-500 flex items-center justify-center text-white font-medium">
+              </h2>
+              {following.length > 0 ? (
+                following.map((f) => (
+                  <div
+                    key={f.id}
+                    className="flex items-center justify-between border-b border-gray-100 py-2"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-purple-400 to-pink-400 flex items-center justify-center text-white font-semibold">
                         {f.username.charAt(0).toUpperCase()}
                       </div>
-                      <span className="text-gray-700 font-medium">
-                        {f.username}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ✅ Story / Post Modal */}
-        {selectedItem && (
-          <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50"
-            onClick={() => setSelectedItem(null)}
-          >
-            <div
-              className="bg-white rounded-2xl w-[90%] sm:w-[420px] md:w-[460px] overflow-hidden shadow-2xl relative transform scale-95 transition-all duration-200 hover:scale-100"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                onClick={() => setSelectedItem(null)}
-                className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 text-xl font-semibold"
-              >
-                ✕
-              </button>
-
-              {selectedType === "story" ? (
-                <div className="flex flex-col items-center p-5">
-                  <div className="w-[250px] h-[250px] rounded-xl overflow-hidden shadow-md bg-gray-100">
-                    <img
-                      src={selectedItem.image_url}
-                      alt={selectedItem.caption}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  {selectedItem.caption && (
-                    <p className="text-gray-700 text-center mt-4 text-sm px-2">
-                      {selectedItem.caption}
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center p-5">
-                  {selectedItem.image_url && (
-                    <div className="w-[300px] h-[200px] rounded-xl overflow-hidden shadow-md bg-gray-100 mb-4">
-                      <img
-                        src={selectedItem.image_url}
-                        alt="Post"
-                        className="w-full h-full object-cover"
-                      />
+                      <p className="text-gray-700">{f.username}</p>
                     </div>
-                  )}
-                  {selectedItem.content && (
-                    <p className="text-gray-700 mb-3 text-center text-sm leading-relaxed px-3">
-                      {selectedItem.content}
-                    </p>
-                  )}
-                  <p className="text-xs text-gray-400 text-right w-full pr-3">
-                    {new Date(selectedItem.created_at).toLocaleString()}
-                  </p>
-                </div>
+                    <button
+                      onClick={() => handleToggleFollow(f.id, true)}
+                      className="text-xs px-3 py-1 rounded-full bg-gray-200 hover:bg-gray-300 text-gray-700"
+                    >
+                      Unfollow
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <p className="text-center text-gray-500 text-sm">
+                  Belum mengikuti siapa pun.
+                </p>
               )}
             </div>
           </div>

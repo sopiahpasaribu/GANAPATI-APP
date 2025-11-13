@@ -1,9 +1,52 @@
-# ganapatih-app-better
+Ganapatih App
 
-Fullstack simple newsfeed app (Ganapatih take-home). Backend uses Express + better-sqlite3. Frontend uses React + Vite + Tailwind.
+Fullstack simple newsfeed app untuk Ganapatih Take-Home Test.
+Backend: Express + better-sqlite3, Frontend: React + Vite + Tailwind.
 
-Ports:
-- Backend: 4000
-- Frontend: 5173
+🚀 Tech Stack
+- Frontend
+- React + Vite
+- TailwindCSS
+- Axios
 
-See backend/README.md and frontend/README.md for setup.
+Backend
+- Express.js
+- better-sqlite3
+- bcryptjs
+- dotenv
+
+⚙️ Setup Cepat
+Backend
+- cd backend
+- pnpm install
+- pnpm run migrate
+- pnpm run dev
+
+
+Default: http://localhost:4000
+
+Akun default:
+
+Username	    Password
+1. sopiah12	    123456
+2. muttaqin	    123456
+3. siegar	    123456
+4. pasaribu	    123456
+
+Frontend
+- cd frontend
+- pnpm install
+- pnpm run dev
+
+
+Default: http://localhost:5173
+
+Set VITE_API_BASE di .env jika backend bukan di port 4000.
+
+✨ Fitur
+- Register & Login
+- Posting teks + gambar
+- Follow/Unfollow
+- Feed & Story
+
+Database otomatis dari migrasi

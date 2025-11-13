@@ -35,4 +35,51 @@ router.get('/stories', auth, (req, res) => {
   }
 });
 
+// Edit Story
+router.put('/stories/:id', auth, (req, res) => {
+  try {
+    const { id } = req.params;
+    const { caption } = req.body;
+
+    const story = all('SELECT user_id FROM stories WHERE id = ?', [id]);
+    if (!story || story.length === 0) {
+      return res.status(404).json({ error: 'Story not found' });
+    }
+
+    if (story[0].user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    run('UPDATE stories SET caption = ? WHERE id = ?', [caption || null, id]);
+
+    res.json({ message: 'Story updated successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'internal' });
+  }
+});
+
+// Delete Story
+router.delete('/stories/:id', auth, (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const story = all('SELECT user_id FROM stories WHERE id = ?', [id]);
+    if (!story || story.length === 0) {
+      return res.status(404).json({ error: 'Story not found' });
+    }
+
+    if (story[0].user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    run('DELETE FROM stories WHERE id = ?', [id]);
+
+    res.json({ message: 'Story deleted successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'internal' });
+  }
+});
+
 module.exports = router;
